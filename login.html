@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  Content Security Policy (nghiêm ngặt).
+  - KHÔNG có 'unsafe-inline'/'unsafe-eval' => mọi script phải nằm ở file ngoài,
+    mọi handler phải dùng addEventListener. Đây là hàng rào XSS chính.
+  - connect-src phải khớp API_BASE_URL trong assets/js/config.js.
+    Nếu đổi domain API thì SỬA CẢ HAI chỗ (kể cả 2 file HTML còn lại).
+  LƯU Ý: 'frame-ancestors' KHÔNG có tác dụng trong thẻ meta — phải set header
+  X-Frame-Options / frame-ancestors ở web server (xem frontend/README.md).
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; frame-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>Đăng nhập — DENSO RAG Chatbot</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div class="auth-page">
+  <main class="auth-card">
+
+    <div class="auth-brand">
+      <div class="brand-mark brand-mark-lg mx-auto mb-2">
+        <i class="bi bi-cpu" aria-hidden="true"></i>
+      </div>
+      <h1 class="h5 mb-1 fw-semibold">DENSO RAG Chatbot</h1>
+      <p class="text-muted-2 small mb-0">Trợ lý hỏi đáp tài liệu kỹ thuật nội bộ</p>
+    </div>
+
+    <div class="card panel border-0 shadow-sm">
+      <div class="card-body p-4">
+
+        <ul class="nav nav-tabs mb-4" role="tablist" aria-label="Đăng nhập hoặc đăng ký">
+          <li class="nav-item flex-fill" role="presentation">
+            <button class="nav-link active w-100" id="tab-login" type="button" role="tab"
+                    aria-controls="pane-login" aria-selected="true" data-bs-toggle="tab" data-bs-target="#pane-login">
+              Đăng nhập
+            </button>
+          </li>
+          <li class="nav-item flex-fill" role="presentation">
+            <button class="nav-link w-100" id="tab-register" type="button" role="tab"
+                    aria-controls="pane-register" aria-selected="false" data-bs-toggle="tab" data-bs-target="#pane-register">
+              Đăng ký
+            </button>
+          </li>
+        </ul>
+
+        <div class="alert alert-danger d-none" id="global-error" role="alert"></div>
+
+        <!-- ---------- Đăng nhập ---------- -->
+        <div class="tab-pane fade show active" id="pane-login" role="tabpanel" aria-labelledby="tab-login" tabindex="0">
+          <form id="form-login" novalidate autocomplete="on">
+            <div class="mb-3">
+              <label class="form-label" for="login-email">Email</label>
+              <input class="form-control" type="email" id="login-email" name="email"
+                     required autocomplete="username" inputmode="email" placeholder="ban@congty.com">
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="login-password">Mật khẩu</label>
+              <div class="input-group">
+                <input class="form-control" type="password" id="login-password" name="password"
+                       required autocomplete="current-password">
+                <button class="btn btn-outline-secondary" type="button" id="toggle-login-pw"
+                        aria-label="Hiện mật khẩu" data-bs-toggle="tooltip" title="Hiện mật khẩu">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <button class="btn btn-primary w-100" type="submit" id="btn-login">
+              <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Đăng nhập
+            </button>
+          </form>
+        </div>
+
+        <!-- ---------- Đăng ký ---------- -->
+        <div class="tab-pane fade" id="pane-register" role="tabpanel" aria-labelledby="tab-register" tabindex="0">
+          <form id="form-register" novalidate autocomplete="on">
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <label class="form-label" for="reg-first">Họ</label>
+                <input class="form-control" type="text" id="reg-first" name="first_name"
+                       required autocomplete="given-name" maxlength="30">
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label" for="reg-last">Tên</label>
+                <input class="form-control" type="text" id="reg-last" name="last_name"
+                       required autocomplete="family-name" maxlength="30">
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="reg-email">Email</label>
+                <input class="form-control" type="email" id="reg-email" name="email"
+                       required autocomplete="username" inputmode="email" placeholder="ban@congty.com">
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="reg-pw1">Mật khẩu</label>
+                <div class="input-group">
+                  <input class="form-control" type="password" id="reg-pw1" name="password1"
+                         required autocomplete="new-password" minlength="8">
+                  <button class="btn btn-outline-secondary" type="button" id="toggle-reg-pw"
+                          aria-label="Hiện mật khẩu" data-bs-toggle="tooltip" title="Hiện mật khẩu">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="form-text">Tối thiểu 8 ký tự, nên có chữ hoa, số và ký tự đặc biệt.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="reg-pw2">Xác nhận mật khẩu</label>
+                <input class="form-control" type="password" id="reg-pw2" name="password2"
+                       required autocomplete="new-password" minlength="8">
+              </div>
+            </div>
+            <button class="btn btn-primary w-100 mt-3" type="submit" id="btn-register">
+              <i class="bi bi-person-plus me-1" aria-hidden="true"></i>Tạo tài khoản
+            </button>
+            <p class="text-muted-2 small mt-3 mb-0">
+              <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+              Tài khoản mới mặc định ở cấp <strong>Worker</strong>: dùng chat và đọc tài liệu.
+              Muốn nạp tài liệu lên, quản trị viên cần nâng cấp lên
+              <strong>Senior Engineer</strong> hoặc <strong>Admin</strong>.
+            </p>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="text-center text-muted-2 small mt-3 mb-0">
+      <a href="/api-docs/swagger-ui/" id="link-api-docs">API documentation</a>
+    </p>
+
+  </main>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/vendor/bootstrap.bundle.min.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/auth-page.js"></script>
+</body>
+</html>

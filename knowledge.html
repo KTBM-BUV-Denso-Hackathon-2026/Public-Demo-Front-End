@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- CSP nghiêm ngặt — xem giải thích ở index.html -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; frame-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>Tài liệu tri thức — DENSO RAG</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ================= Sidebar (dùng chung kiểu với chat) ================= -->
+  <aside class="sidebar" id="sidebar" aria-label="Menu">
+    <div class="sidebar-brand">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-cpu"></i></span>
+      <span>DENSO RAG</span>
+      <button class="icon-btn ms-auto d-lg-none" type="button" id="btn-close-sidebar" aria-label="Đóng menu">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-scroll scroll-thin" aria-label="Điều hướng">
+      <div class="px-2 pt-2">
+        <a class="chat-item" href="index.html">
+          <i class="bi bi-chat-dots flex-shrink-0" aria-hidden="true"></i>
+          <span class="chat-item-title">Hỏi đáp</span>
+        </a>
+        <a class="chat-item is-active" href="knowledge.html" aria-current="page">
+          <i class="bi bi-folder2-open flex-shrink-0" aria-hidden="true"></i>
+          <span class="chat-item-title">Tài liệu tri thức</span>
+        </a>
+      </div>
+
+      <div class="chat-group-label">Quy trình</div>
+      <div class="px-2 text-muted-2 text-s">
+        <div class="d-flex gap-2 mb-2">
+          <i class="bi bi-1-circle-fill flex-shrink-0"></i>
+          <span>Tải tài liệu lên (Markdown, TXT, CSV, JSON — tối đa 10&nbsp;MB)</span>
+        </div>
+        <div class="d-flex gap-2 mb-2">
+          <i class="bi bi-2-circle-fill flex-shrink-0"></i>
+          <span>Hệ thống tách đoạn, tạo vector và nạp vào cơ sở dữ liệu</span>
+        </div>
+        <div class="d-flex gap-2">
+          <i class="bi bi-3-circle-fill flex-shrink-0"></i>
+          <span>Mọi câu hỏi sẽ được trả lời dựa trên các tài liệu này</span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="dropdown">
+        <button class="btn btn-sm w-100 text-start d-flex align-items-center gap-2 btn-ghost"
+                type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btn-user-menu">
+          <span class="msg-avatar is-user avatar-xs" aria-hidden="true">
+            <i class="bi bi-person"></i>
+          </span>
+          <span class="flex-grow-1 text-truncate" id="user-label">Đang tải…</span>
+          <i class="bi bi-chevron-up small text-muted-2" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end w-100 menu-user">
+          <li>
+            <div class="px-3 py-2">
+              <div class="fw-semibold small text-truncate" id="menu-email">—</div>
+              <div class="text-muted-2 text-xs">
+                Cấp bậc: <span id="menu-level">—</span>
+              </div>
+            </div>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><button class="dropdown-item" type="button" id="btn-logout"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Đăng xuất</button></li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= Nội dung ================= -->
+  <main class="main-area">
+    <header class="topbar">
+      <button class="icon-btn d-lg-none" type="button" id="btn-open-sidebar" aria-label="Mở menu">
+        <i class="bi bi-list" aria-hidden="true"></i>
+      </button>
+      <div class="topbar-title">Tài liệu tri thức</div>
+      <button class="btn btn-sm ms-auto d-none" type="button" id="btn-refresh">
+        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Làm mới
+      </button>
+    </header>
+
+    <div class="thread-scroll scroll-thin">
+      <div class="page-wrap">
+
+        <div class="alert alert-warning d-none" id="no-permission" role="alert"></div>
+
+        <!-- ---------- Khu vực tải lên ---------- -->
+        <section class="panel p-4 mb-4" id="upload-section" aria-labelledby="upload-title">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-cloud-arrow-up text-primary" aria-hidden="true"></i>
+            <h1 class="h6 mb-0 fw-semibold" id="upload-title">Tải tài liệu lên</h1>
+          </div>
+          <p class="text-muted-2 small mb-3">
+            Hệ thống sẽ tách văn bản thành các đoạn nhỏ, tạo vector cho từng đoạn và nạp vào cơ sở dữ liệu.
+            Trong lúc nạp, trang này sẽ báo trạng thái từng tài liệu.
+          </p>
+
+          <form id="form-upload" novalidate>
+            <div class="mb-3">
+              <label class="form-label" for="upload-title-input">Tiêu đề <span class="text-danger">*</span></label>
+              <input class="form-control" type="text" id="upload-title-input" required
+                     maxlength="255" placeholder="Ví dụ: Quy trình bảo trì tủ điện điều khiển">
+            </div>
+
+            <div class="mb-3">
+              <span class="form-label d-block">Tệp tài liệu <span class="text-danger">*</span></span>
+              <div class="dropzone" id="dropzone" tabindex="0" role="button"
+                   aria-label="Chọn tệp hoặc kéo thả vào đây">
+                <i class="bi bi-file-earmark-arrow-up fs-3 d-block mb-2 text-muted-2" aria-hidden="true"></i>
+                <div class="fw-medium" id="dropzone-title">Nhấn để chọn tệp, hoặc kéo thả vào đây</div>
+                <div class="text-muted-2 small mt-1" id="dropzone-hint"></div>
+              </div>
+              <input type="file" id="file-input" class="d-none"
+                     accept=".txt,.md,.markdown,.csv,.json">
+              <div class="form-text" id="file-hint"></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="upload-summary">Mô tả ngắn <span class="text-muted-2 fw-normal">(tuỳ chọn)</span></label>
+              <textarea class="form-control" id="upload-summary" rows="2" maxlength="2000"
+                        placeholder="Giúp người khác hiểu tài liệu này nói về gì."></textarea>
+            </div>
+
+            <div class="progress d-none mb-3" id="upload-progress" role="progressbar"
+                 aria-label="Tiến trình tải lên" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-bar progress-bar-init" id="upload-progress-bar">0%</div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary" type="submit" id="btn-upload">
+                <i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>Tải lên &amp; nạp vào RAG
+              </button>
+              <button class="btn btn-outline-secondary d-none" type="button" id="btn-cancel-upload">
+                Hủy
+              </button>
+            </div>
+            <p class="text-muted-2 small mt-2 mb-0">
+              <i class="bi bi-clock me-1" aria-hidden="true"></i>
+              Lần đầu tiên có thể mất 15–25&nbsp;giây vì hệ thống nạp mô hình embedding.
+            </p>
+          </form>
+        </section>
+
+        <!-- ---------- Danh sách tài liệu ---------- -->
+        <section class="panel" aria-labelledby="list-title">
+          <div class="p-4 pb-3 d-flex flex-wrap align-items-center gap-2">
+            <div>
+              <h2 class="h6 mb-0 fw-semibold" id="list-title">Thư viện tài liệu</h2>
+              <div class="text-muted-2 small" id="list-summary">—</div>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-2">
+              <label class="form-label small mb-0 text-muted-2" for="filter-status">Lọc</label>
+              <select class="form-select form-select-sm filter-select" id="filter-status">
+                <option value="">Tất cả</option>
+                <option value="done">Hoàn tất</option>
+                <option value="processing">Đang xử lý</option>
+                <option value="pending">Chờ xử lý</option>
+                <option value="failed">Lỗi</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table doc-table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">Tài liệu</th>
+                  <th scope="col" class="col-status">Trạng thái</th>
+                  <th scope="col" class="col-count text-end">Đoạn</th>
+                  <th scope="col" class="col-updated">Cập nhật</th>
+                  <th scope="col" class="col-actions text-end">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="doc-rows"></tbody>
+            </table>
+          </div>
+
+          <div class="p-3 d-flex align-items-center justify-content-between" id="pager-wrap">
+            <div class="text-muted-2 small" id="pager-info">—</div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Phân trang">
+              <button class="btn btn-outline-secondary" type="button" id="btn-prev">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i> Trước
+              </button>
+              <button class="btn btn-outline-secondary" type="button" id="btn-next">
+                Sau <i class="bi bi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal xem chi tiết tài liệu + các đoạn chunk -->
+<div class="modal fade" id="modal-doc" tabindex="-1" aria-labelledby="modal-doc-label" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-3">
+        <h2 class="modal-title h6" id="modal-doc-label">Chi tiết tài liệu</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body" id="modal-doc-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal sửa thông tin tài liệu -->
+<div class="modal fade" id="modal-edit" tabindex="-1" aria-labelledby="modal-edit-label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="form-edit">
+        <div class="modal-header py-3">
+          <h2 class="modal-title h6" id="modal-edit-label">Sửa thông tin tài liệu</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="edit-title">Tiêu đề</label>
+            <input class="form-control" type="text" id="edit-title" required maxlength="255">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="edit-summary">Mô tả ngắn</label>
+            <textarea class="form-control" id="edit-summary" rows="3" maxlength="2000"></textarea>
+          </div>
+          <p class="text-muted-2 small mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            Sửa tiêu đề/mô tả không ảnh hưởng nội dung đã nạp. Muốn nạp lại nội dung, hãy xoá rồi tải lên tệp mới.
+          </p>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+          <button type="submit" class="btn btn-sm btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/vendor/bootstrap.bundle.min.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/auth-guard.js"></script>
+<script src="assets/js/knowledge-page.js"></script>
+</body>
+</html>

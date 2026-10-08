@@ -1,0 +1,28 @@
+# ============================================================================
+# frontend — file sinh ra khi chạy, không commit
+# ============================================================================
+
+# Bytecode Python của serve.py
+__pycache__/
+*.py[cod]
+
+# Bản build/minify cục bộ (dự án KHÔNG dùng build step — thư mục này
+# chỉ để phòng khi ai đó thêm tooling sau này).
+dist/
+build/
+*.map
+
+# File cấu hình riêng của máy (KHÔNG đặt secret ở đây — xem assets/js/config.js,
+# file đó chỉ chứa URL công khai).
+.env
+.env.*
+!.env.example
+
+# Log
+*.log
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

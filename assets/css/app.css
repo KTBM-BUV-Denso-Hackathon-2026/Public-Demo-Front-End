@@ -1,0 +1,841 @@
+/* ==========================================================================
+   DENSO RAG Chatbot — lớp giao diện riêng.
+   Bootstrap 5.3 + Bootstrap Icons (đã vendor trong assets/vendor).
+   Mục tiêu: phong cách tối giản giống ChatGPT/Gemini: nhiều khoảng trắng,
+   một cột đọc thoải mái, sidebar gọn, focus vào nội dung hội thoại.
+   ========================================================================== */
+
+:root {
+  /* Brand */
+  --denso-accent: #0f6cbd;
+  --denso-accent-soft: #e7f1fb;
+
+  /* Nền & chữ */
+  --app-bg: #ffffff;
+  --app-surface: #f7f7f8;
+  --app-surface-2: #f0f0f2;
+  --app-border: #e3e3e6;
+  --app-text: #1f2328;
+  --app-text-muted: #6b7280;
+
+  --sidebar-width: 288px;
+  --content-max: 768px;
+
+  /* Bootstrap override */
+  --bs-body-bg: var(--app-bg);
+  --bs-body-color: var(--app-text);
+  --bs-border-color: var(--app-border);
+  --bs-link-color: var(--denso-accent);
+}
+
+/* Tôn trọng lựa chọn "giảm chuyển động" của hệ điều hành (accessibility). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ẩn thanh cuộn xấu nhưng vẫn cuộn được (khu vực sidebar). */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cfcfd4 transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #cfcfd4;
+  border-radius: 8px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.text-muted-2 {
+  color: var(--app-text-muted) !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 2000;
+}
+.skip-link:focus {
+  left: 8px;
+  top: 8px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 2px solid var(--denso-accent);
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   Khung ứng dụng (sidebar + nội dung)
+   ========================================================================== */
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* --- Sidebar ------------------------------------------------------------- */
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width);
+  background: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-brand {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--denso-accent), #2b9bf0);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* Bản lớn dùng ở trang đăng nhập. */
+.brand-mark-lg {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  border-radius: 12px;
+}
+
+/* Avatar nhỏ trong menu người dùng. */
+.avatar-xs {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+
+/* Nút "hội thoại mới" và nút menu người dùng: nền trong suốt, viền mảnh. */
+.btn-plain {
+  background: transparent;
+  border: 1px solid var(--app-border);
+}
+.btn-plain:hover {
+  background: var(--app-surface-2);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 0;
+}
+.btn-ghost:hover {
+  background: var(--app-surface-2);
+}
+
+/* Nút dừng sinh câu trả lời (nổi bật hơn nút gửi). */
+.send-btn-stop {
+  background: #b02a37;
+  color: #fff;
+}
+.send-btn-stop:hover {
+  background: #8f2230;
+  color: #fff;
+}
+
+.menu-user {
+  min-width: 230px;
+}
+
+.menu-params {
+  min-width: 320px;
+}
+
+.text-xs {
+  font-size: 0.76rem;
+}
+
+.text-s {
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* Bảng tài liệu: cột có bề rộng cố định để bảng không nhảy layout. */
+.col-status {
+  width: 130px;
+}
+.col-count {
+  width: 90px;
+}
+.col-updated {
+  width: 150px;
+}
+.col-actions {
+  width: 120px;
+}
+
+.filter-select {
+  width: auto;
+}
+
+.progress-bar-init {
+  width: 0%;
+}
+
+.sidebar-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0 10px 10px;
+  min-height: 0;
+}
+
+.sidebar-foot {
+  border-top: 1px solid var(--app-border);
+  padding: 10px;
+}
+
+.chat-group-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-text-muted);
+  font-weight: 600;
+  padding: 14px 8px 6px;
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  border: 1px solid transparent;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+
+.chat-item:hover {
+  background: var(--app-surface-2);
+}
+
+.chat-item.is-active {
+  background: #fff;
+  border-color: var(--app-border);
+  font-weight: 500;
+}
+
+.chat-item-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-item .chat-item-actions {
+  opacity: 0;
+  flex: 0 0 auto;
+  transition: opacity 0.12s ease;
+}
+.chat-item:hover .chat-item-actions,
+.chat-item:focus-within .chat-item-actions {
+  opacity: 1;
+}
+
+/* Nút icon nhỏ, dùng chung. */
+.icon-btn {
+  border: 0;
+  background: transparent;
+  color: var(--app-text-muted);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+.icon-btn:hover {
+  background: var(--app-surface-2);
+  color: var(--app-text);
+}
+.icon-btn:focus-visible {
+  outline: 2px solid var(--denso-accent);
+  outline-offset: 1px;
+}
+
+/* --- Khu vực chính ------------------------------------------------------- */
+
+.main-area {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.topbar {
+  height: 56px;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--app-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(8px);
+}
+
+.topbar-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Vùng hội thoại ------------------------------------------------------ */
+
+.thread-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  scroll-behavior: smooth;
+}
+
+.thread {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 28px 20px 16px;
+}
+
+/* Trạng thái rỗng (giống ChatGPT) */
+.empty-state {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 8vh 20px 40px;
+  text-align: center;
+}
+
+.empty-state h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 28px;
+  text-align: left;
+}
+
+.suggestion-card {
+  border: 1px solid var(--app-border);
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.suggestion-card:hover {
+  border-color: #c9d8ea;
+  background: var(--denso-accent-soft);
+}
+
+.suggestion-card .bi {
+  color: var(--denso-accent);
+  font-size: 1.05rem;
+  margin-top: 1px;
+}
+
+/* --- Tin nhắn ------------------------------------------------------------ */
+
+.msg {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid transparent;
+}
+
+.msg:last-child {
+  border-bottom: 0;
+}
+
+.msg-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--app-surface-2);
+  color: var(--app-text);
+}
+
+.msg-avatar.is-user {
+  background: #3b4453;
+  color: #fff;
+}
+
+.msg-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.msg-role {
+  font-weight: 600;
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.msg-text {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Đoạn gạch đầu dòng được render an toàn bằng node (xem ui.renderText). */
+.ui-bullet {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-left: 2px;
+}
+.ui-bullet-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-top: 0.62em;
+  opacity: 0.55;
+}
+.ui-bullet-text {
+  flex: 1 1 auto;
+}
+.ui-gap {
+  height: 0.5em;
+}
+
+.msg.is-pending .msg-text {
+  color: var(--app-text-muted);
+}
+
+/* Con trỏ nhấp nháy khi đang stream */
+.caret::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 2px;
+  background: currentColor;
+  vertical-align: text-bottom;
+  animation: caret-blink 1s steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* --- Nguồn tham khảo (RAG) ------------------------------------------------ */
+
+.sources {
+  margin-top: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  overflow: hidden;
+}
+
+.sources > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--app-text-muted);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+.sources > summary::-webkit-details-marker {
+  display: none;
+}
+.sources > summary::before {
+  content: '\F64D'; /* bootstrap-icons: chevron-right */
+  font-family: bootstrap-icons;
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+}
+.sources[open] > summary::before {
+  transform: rotate(90deg);
+}
+.sources > summary:hover {
+  color: var(--app-text);
+}
+
+.sources-body {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--app-border);
+}
+
+.source-item {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #33383f;
+}
+
+.no-context-note {
+  font-size: 0.82rem;
+  color: var(--app-text-muted);
+  font-style: italic;
+  margin-top: 6px;
+}
+
+/* --- Ô nhập liệu -------------------------------------------------------- */
+
+.composer-wrap {
+  flex: 0 0 auto;
+  padding: 0 20px 18px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 22%);
+}
+
+.composer {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 8px 8px 8px 14px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.composer:focus-within {
+  border-color: #b9cfe6;
+  box-shadow: 0 2px 14px rgba(15, 108, 189, 0.12);
+}
+
+.composer textarea {
+  border: 0;
+  outline: 0;
+  resize: none;
+  flex: 1 1 auto;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  padding: 8px 0;
+  max-height: 200px;
+  background: transparent;
+  color: inherit;
+}
+
+.send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--app-surface-2);
+  color: var(--app-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.send-btn.is-ready {
+  background: var(--denso-accent);
+  color: #fff;
+}
+.send-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.composer-hint {
+  max-width: var(--content-max);
+  margin: 8px auto 0;
+  font-size: 0.72rem;
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+/* --- Dropdown tham số ---------------------------------------------------- */
+
+.dropdown-menu {
+  border-color: var(--app-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.param-row label {
+  flex: 0 0 116px;
+  font-weight: 500;
+  margin: 0;
+  font-size: 0.82rem;
+}
+.param-row .form-range {
+  flex: 1 1 auto;
+  margin: 0;
+}
+.param-value {
+  flex: 0 0 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+}
+
+/* ==========================================================================
+   Trang tài liệu tri thức
+   ========================================================================== */
+
+.page-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 26px 20px 48px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+}
+
+.dropzone {
+  border: 2px dashed #cdd3da;
+  border-radius: 12px;
+  padding: 30px 20px;
+  text-align: center;
+  background: var(--app-surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dropzone:hover,
+.dropzone.is-over {
+  border-color: var(--denso-accent);
+  background: var(--denso-accent-soft);
+}
+
+.doc-table {
+  font-size: 0.875rem;
+  margin: 0;
+}
+.doc-table th {
+  font-weight: 600;
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--app-border);
+  white-space: nowrap;
+}
+.doc-table td {
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f1f3;
+}
+.doc-table tbody tr:hover {
+  background: var(--app-surface);
+}
+
+.doc-title-cell {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.kv {
+  font-size: 0.8rem;
+}
+.kv dt {
+  color: var(--app-text-muted);
+  font-weight: 500;
+}
+.kv dd {
+  margin-bottom: 0.4rem;
+  overflow-wrap: anywhere;
+}
+
+.chunk-box {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.83rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pagination-sm-custom {
+  gap: 4px;
+}
+
+/* ==========================================================================
+   Trang đăng nhập
+   ========================================================================== */
+
+.auth-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(1200px 600px at 50% -10%, #eaf2fb 0%, #ffffff 60%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.field-error {
+  display: block;
+  font-size: 0.78rem;
+  color: #b02a37;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1045;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.18);
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1040;
+  }
+  .suggestion-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .thread {
+    padding: 18px 14px 12px;
+  }
+  .composer-wrap {
+    padding: 0 12px 14px;
+  }
+  .msg {
+    gap: 10px;
+  }
+  .page-wrap {
+    padding: 18px 12px 40px;
+  }
+  .table-responsive .doc-table {
+    min-width: 720px;
+  }
+}
+
+/* Khi in ra (ví dụ xuất báo cáo) ẩn phần điều khiển. */
+@media print {
+  .sidebar,
+  .composer-wrap,
+  .topbar,
+  .no-print {
+    display: none !important;
+  }
+}

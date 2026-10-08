@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  CSP nghiêm ngặt — KHÔNG 'unsafe-inline', KHÔNG 'unsafe-eval'.
+  'connect-src' phải khớp API_BASE_URL trong assets/js/config.js.
+  frame-ancestors phải set ở HTTP header (xem frontend/README.md), không dùng được trong meta.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; frame-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>Trợ lý DENSO — Hỏi đáp tài liệu kỹ thuật</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<a class="skip-link" href="#thread-scroll">Bỏ qua tới nội dung hội thoại</a>
+
+<div class="app-shell">
+
+  <!-- ================= Sidebar ================= -->
+  <aside class="sidebar" id="sidebar" aria-label="Danh sách hội thoại">
+    <div class="sidebar-brand">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-cpu"></i></span>
+      <span>DENSO RAG</span>
+      <button class="icon-btn ms-auto d-lg-none" type="button" id="btn-close-sidebar" aria-label="Đóng menu">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="px-3 pb-2">
+      <button class="btn btn-sm w-100 text-start btn-plain" type="button" id="btn-new-chat">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Hội thoại mới
+      </button>
+    </div>
+
+    <nav class="sidebar-scroll scroll-thin" id="chat-list" aria-label="Lịch sử hội thoại"></nav>
+
+    <div class="sidebar-foot">
+      <div class="dropdown">
+        <button class="btn btn-sm w-100 text-start d-flex align-items-center gap-2 btn-ghost"
+                type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btn-user-menu">
+          <span class="msg-avatar is-user avatar-xs" aria-hidden="true">
+            <i class="bi bi-person"></i>
+          </span>
+          <span class="flex-grow-1 text-truncate" id="user-label">Đang tải…</span>
+          <i class="bi bi-chevron-up small text-muted-2" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end w-100 menu-user">
+          <li>
+            <div class="px-3 py-2">
+              <div class="fw-semibold small text-truncate" id="menu-email">—</div>
+              <div class="text-muted-2 text-xs">
+                Cấp bậc: <span id="menu-level">—</span>
+              </div>
+            </div>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="knowledge.html" id="link-knowledge"><i class="bi bi-folder2-open me-2" aria-hidden="true"></i>Tài liệu tri thức</a></li>
+          <li><button class="dropdown-item" type="button" id="btn-logout"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Đăng xuất</button></li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= Khu vực chính ================= -->
+  <main class="main-area">
+
+    <header class="topbar">
+      <button class="icon-btn d-lg-none" type="button" id="btn-open-sidebar" aria-label="Mở menu">
+        <i class="bi bi-list" aria-hidden="true"></i>
+      </button>
+      <div class="topbar-title" id="topbar-title">Hội thoại mới</div>
+
+      <div class="ms-auto dropdown">
+        <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                aria-label="Tuỳ chọn truy hồi" id="btn-params" title="Tuỳ chọn truy hồi">
+          <i class="bi bi-sliders" aria-hidden="true"></i>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end menu-params">
+          <div class="px-3 pt-2 pb-1 fw-semibold small">Tuỳ chọn truy hồi (RAG)</div>
+          <div class="px-3 pb-2">
+            <div class="param-row">
+              <label for="param-topk">Số đoạn (top_k)</label>
+              <input class="form-range" type="range" id="param-topk" min="1" max="20" step="1">
+              <span class="param-value" id="param-topk-val">5</span>
+            </div>
+            <div class="param-row">
+              <label for="param-temp">Nhiệt độ</label>
+              <input class="form-range" type="range" id="param-temp" min="0" max="2" step="0.1">
+              <span class="param-value" id="param-temp-val">0.7</span>
+            </div>
+            <div class="param-row">
+              <label for="param-max">Độ dài tối đa</label>
+              <input class="form-range" type="range" id="param-max" min="64" max="2048" step="64">
+              <span class="param-value" id="param-max-val">512</span>
+            </div>
+          </div>
+          <div class="px-3 pb-2 pt-1 border-top">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="param-stream" checked>
+              <label class="form-check-label small" for="param-stream">Trả lời từng đoạn (streaming)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="icon-btn" type="button" id="btn-rename" aria-label="Đổi tên hội thoại" title="Đổi tên">
+        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+      </button>
+      <button class="icon-btn text-danger" type="button" id="btn-delete-chat" aria-label="Xoá hội thoại" title="Xoá">
+        <i class="bi bi-trash3" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <!-- Vùng cuộn của hội thoại -->
+    <div class="thread-scroll scroll-thin" id="thread-scroll" tabindex="-1">
+      <div id="thread" class="thread" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <!-- Trạng thái rỗng -->
+      <div class="empty-state" id="empty-state">
+        <h1>Chào bạn 👋</h1>
+        <p class="text-muted-2 mb-0">
+          Hỏi bất cứ điều gì về tài liệu kỹ thuật đã được nạp. Câu trả lời sẽ dựa trên
+          nội dung tài liệu thay vì kiến thức chung.
+        </p>
+        <div class="suggestion-grid" id="suggestion-grid"></div>
+      </div>
+    </div>
+
+    <!-- Ô nhập liệu -->
+    <div class="composer-wrap">
+      <form class="composer" id="composer" autocomplete="off">
+        <label class="sr-only" for="input-question">Câu hỏi của bạn</label>
+        <textarea id="input-question" name="question" rows="1"
+                  placeholder="Đặt câu hỏi về tài liệu kỹ thuật…"
+                  aria-describedby="composer-hint"></textarea>
+        <button class="send-btn" type="submit" id="btn-send" aria-label="Gửi câu hỏi" disabled>
+          <i class="bi bi-arrow-up" aria-hidden="true"></i>
+        </button>
+        <button class="send-btn send-btn-stop d-none" type="button" id="btn-stop" aria-label="Dừng sinh câu trả lời">
+          <i class="bi bi-stop-fill" aria-hidden="true"></i>
+        </button>
+      </form>
+      <p class="composer-hint" id="composer-hint">
+        <kbd>Enter</kbd> gửi · <kbd>Shift</kbd>+<kbd>Enter</kbd> xuống dòng.
+        Câu trả lời có thể sai — hãy đối chiếu mục “Nguồn tham khảo”.
+      </p>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal đổi tên -->
+<div class="modal fade" id="modal-rename" tabindex="-1" aria-labelledby="modal-rename-label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="form-rename">
+        <div class="modal-header py-3">
+          <h2 class="modal-title h6" id="modal-rename-label">Đổi tên hội thoại</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" for="input-rename">Tiêu đề</label>
+          <input class="form-control" type="text" id="input-rename" maxlength="255" required>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Huỷ</button>
+          <button type="submit" class="btn btn-sm btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/vendor/bootstrap.bundle.min.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/auth-guard.js"></script>
+<script src="assets/js/chat-page.js"></script>
+</body>
+</html>
